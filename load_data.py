@@ -15,7 +15,7 @@ def get_pv_params(track, mcps, mcvs):
     track_pv_id = track_mcp['PV']
     track_pv = mcvs[track_pv_id]
     pos = track_pv['Pos']
-    return pos[0], pos[1], pos[2], track_pv['key']
+    return pos[0], pos[1], pos[2], track_pv['key'], track_pv['products']
 
 
 def load_data(filename, add_pv_params=True):
@@ -40,8 +40,8 @@ def load_data(filename, add_pv_params=True):
 
     # add mc pv info to all tracks with minimum one particle hypothesis
     if add_pv_params:
-        df['mcpx'] = df['mcpy'] = df['mcpz'] = df['mcpvid'] = np.nan
+        df['mcpx'] = df['mcpy'] = df['mcpz'] = df['mcpvid'] = df['mcpvprods'] = np.nan
         for index, row in df.iterrows():
-            df.loc[index, ['mcpx', 'mcpy', 'mcpz', 'mcpvid']] = get_pv_params(row, data['MCParticles'], data['MCVertices'])
+            df.loc[index, ['mcpx', 'mcpy', 'mcpz', 'mcpvid', 'mcpvprods']] = get_pv_params(row, data['MCParticles'], data['MCVertices'])
 
     return df
