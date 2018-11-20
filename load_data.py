@@ -1,6 +1,9 @@
 import json
 import pandas as pd
 import numpy as np
+from glob import glob
+import os
+from tqdm import tqdm
 
 
 def get_pv_params(track, mcps, mcvs):
@@ -45,3 +48,10 @@ def load_data(filename, add_pv_params=True):
             df.loc[index, ['mcpx', 'mcpy', 'mcpz', 'mcpvid', 'mcpvprods']] = get_pv_params(row, data['MCParticles'], data['MCVertices'])
 
     return df
+
+
+def load_directory(dirname, add_pv_params=True, max_files=-1):
+    """ Return array of dataframes for each file in given directory
+    """
+    json_files = glob(os.path.dirname(dirname) + '/*.json')[:max_files]
+    return [load_data(fname, add_pv_params) for fname in tqdm(json_files)]
