@@ -1,43 +1,65 @@
 import numpy as np
 import pandas as pd
 from sklearn.cluster import DBSCAN
+from pprint import pprint
 
 CLUSTERING_KWARGS = {
-    "epsilon": 5,
-    "weight": "from_cov"
+    "eps": 0.4, #1.625,
+    # "weight": "from_cov"
+    "n_jobs": 2
 }
 
-def clustering(X, epsilon=20, weight=None):
+def clustering(X, weight=None, **kwargs):
+    # X = X.dropna()
+    # d = pd.DataFrame()
+    # d["rho"] = np.sqrt(X.x**2 + X.y**2)
+    # d["x"] = X.x
+    # d["y"] = X.y
+    # d["z"] = X.z
+    # d["cov_x"] = X.cov_x
+    # d["cov_y"] = X.cov_y
 
-    cluster_finder = DBSCAN(eps=epsilon)
-    X = X.dropna()
+    d = X.dropna()
 
-    X["rho"] = np.sqrt(X.x**2 + X.y**2)
+    from sklearn.neighbors import LocalOutlierFactor
+    lof = LocalOutlierFactor(contamination="auto")
+    d["outlier"] = lof.fit_predict(d[["x", "y", "z"]])
 
+    d = d[d.outlier>0]
+
+    cluster_finder = DBSCAN(**kwargs)
+
+
+
+
+    d["rho"] = np.sqrt(X.x**2 + X.y**2)
     if weight is None:
-        X["x_weight"] = np.ones(len(X))
-        X["y_weight"] = np.ones(len(X))
-        X["z_weight"] = np.ones(len(X))
+        d["x_weight"] = np.ones(len(d))
+        d["y_weight"] = np.ones(len(d))
+        d["z_weight"] = np.ones(len(d))
     elif weight == "from_cov":
-        X["x_weight"] = 1./ X.cov_x**2
-        X["y_weight"] = 1. / X.cov_y**2
-        X["z_weight"] = np.ones(len(X))
+        d["x_weight"] = 1./ d.cov_x**2
+        d["y_weight"] = 1. / d.cov_y**2
+        d["z_weight"] = np.ones(len(d))
     else:
         raise RuntimeError("Dont know what to do with this weights")
 
-    X["cluster_idx"] = cluster_finder.fit_predict(X[["rho", "z"]])
+    d["cluster_idx"] = cluster_finder.fit_predict(
+        d[["x", "y", "z"]]
+        # X.z.values.reshape(-1, 1)
+    )
 
     means = list()
 
-    for v in X["cluster_idx"].unique():
+    for v in d["cluster_idx"].unique():
         # skip tracks belonging to no clusters
         if v==-1:
             continue
 
-        dd = X[X.cluster_idx == v]
-        x_mean = np.sum(dd.x * dd.x_weight) / dd.x_weight.sum()
-        y_mean = np.sum(dd.y * dd.y_weight) / dd.y_weight.sum()
-        z_mean = np.sum(dd.z * dd.z_weight) / dd.z_weight.sum()
+        dd = d[d.cluster_idx == v]
+        x_mean = np.sum(dd.x * dd.x_weight) / np.sum(dd.x_weight)
+        y_mean = np.sum(dd.y * dd.y_weight) / np.sum(dd.y_weight)
+        z_mean = np.sum(dd.z * dd.z_weight) / np.sum(dd.z_weight)
         means.append((x_mean, y_mean, z_mean))
     return means
 
@@ -75,5 +97,5 @@ class ObjectDetector:
 
         rv = np.empty(len(PVs), dtype=object)
         rv[:] = PVs
-        print(rv.shape)
+        
         return rv
