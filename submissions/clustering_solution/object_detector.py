@@ -22,15 +22,14 @@ def clustering(X, weight=None, **kwargs):
     d = X.dropna()
 
     from sklearn.neighbors import LocalOutlierFactor
-    lof = LocalOutlierFactor(contamination="auto")
+    lof = LocalOutlierFactor(contamination="auto")# , n_neighbors=20)
     d["outlier"] = lof.fit_predict(d[["x", "y", "z"]])
+
+    # print(len(d[d.outlier<0]) / len(d))
 
     d = d[d.outlier>0]
 
     cluster_finder = DBSCAN(**kwargs)
-
-
-
 
     d["rho"] = np.sqrt(X.x**2 + X.y**2)
     if weight is None:
