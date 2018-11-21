@@ -15,7 +15,7 @@ def load_data(filename):
 
 
 def extract_tracks(data):
-    df = pd.DataFrame(data['VeloTracks']).T
+    df = pd.DataFrame.from_dict(data['VeloTracks'], orient='index')
     df['x'] = df['ClosestToBeam'].map(lambda l: l[0])
     df['y'] = df['ClosestToBeam'].map(lambda l: l[1])
     df['z'] = df['ClosestToBeam'].map(lambda l: l[2])
@@ -31,11 +31,36 @@ def extract_tracks(data):
 
 
 def extract_mc(data):
-    df = pd.DataFrame(data['MCVertices']).T
+    df = pd.DataFrame.from_dict(data['MCVertices'], orient='index')
     df['x'] = df['Pos'].map(lambda l: l[0])
     df['y'] = df['Pos'].map(lambda l: l[1])
     df['z'] = df['Pos'].map(lambda l: l[2])
     df = df.drop('Pos', axis=1)
+    return df
+
+
+def extract_mcpv(data):
+    return pd.DataFrame.from_dict(data['MCParticles'], orient='index')
+
+
+def extract_hits(data):
+    return pd.DataFrame.from_dict(data['VPClusters'], orient='index')
+
+
+def match_tracks_mc(tracks, hits, mcpv, mc, threshold=5):
+    df = tracks[tracks['MCPs'].map(len) == 1].copy()
+    df['MCP'] = df['MCPs'].map(lambda l: l[0])
+    df['firstHit'] = df['LHCbIDs'].map(lambda l: l[0])
+    df = df.merge(hits, left_on='firstHit', right_on='key', suffixes=('', 'FirstHit'))
+    df = df.merge(mcpv[['PV', 'key']], left_on='MCP', right_on='key')
+    df = df.merge(mc, left_on='PV', right_on='key', suffixes=('', 'PV'))
+    df['zdiff'] = np.abs(df['z'] - df['zPV'])
+    df['close'] = df['zdiff'] < threshold
+    return df
+
+
+def generate_features(df):
+    df['rho'] = np.sqrt(df['x']**2 + df['y']**2)
     return df
 
 
